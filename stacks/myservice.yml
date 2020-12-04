@@ -1,4 +1,4 @@
-version: '3'
+version: '3.8'
 services:
   whoami:
     image: traefik/whoami
@@ -23,5 +23,5 @@ services:
     networks:
       - traefik
 networks:
-  traefik-public:
+  traefik:
     external: true
