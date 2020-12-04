@@ -1,0 +1,50 @@
+version: '3'
+services:
+  traefik:
+    image: traefik:v2.3
+    ports:
+      - 80:80
+      - 443:443
+    deploy:
+      placement:
+        constraints:
+          - node.labels.traefik.certificates-data == true
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=traefik
+        - traefik.constraint-label=traefik-service
+        - traefik.http.middlewares.traefik-auth.basicauth.users=${USERNAME}:${HASHED_PASSWORD}
+        - traefik.http.middlewares.https-redirect.redirectscheme.scheme=https
+        - traefik.http.middlewares.https-redirect.redirectscheme.permanent=true
+        - traefik.http.routers.mytraefik-web.rule=Host(`mytraefik.${DOMAIN}`)
+        - traefik.http.routers.mytraefik-web.entrypoints=web
+        - traefik.http.routers.mytraefik-web.middlewares=https-redirect
+        - traefik.http.routers.mytraefik-web-secure.rule=Host(`mytraefik.${DOMAIN}`)
+        - traefik.http.routers.mytraefik-web-secure.entrypoints=web-secure
+        - traefik.http.routers.mytraefik-web-secure.middlewares=traefik-auth
+        - traefik.http.routers.mytraefik-web-secure.service=api@internal
+        - traefik.http.routers.mytraefik-web-secure.tls=true
+        - traefik.http.routers.mytraefik-web-secure.tls.certresolver=le
+        - traefik.http.services.mytraefik.loadbalancer.server.port=8080
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-certificates-data:/certificates
+    command:
+      - --providers.docker
+      - --providers.docker.swarmmode
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.constraints=Label(`traefik.constraint-label`, `traefik-service`)
+      - --entrypoints.web.address=:80
+      - --entrypoints.web-secure.address=:443
+      - --certificatesresolvers.le.acme.email=${EMAIL}
+      - --certificatesresolvers.le.acme.storage=/certificates/acme.json
+      - --certificatesresolvers.le.acme.tlschallenge=true
+      - --log
+      - --api
+    networks:
+      - traefik
+volumes:
+  traefik-certificates-data:
+networks:
+  traefik:
+    external: true

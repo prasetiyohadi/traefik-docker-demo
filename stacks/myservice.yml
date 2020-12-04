@@ -1,0 +1,27 @@
+version: '3'
+services:
+  whoami:
+    image: traefik/whoami
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.traefik.certificates-data == true
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=traefik
+        - traefik.constraint-label=traefik-service
+        - traefik.http.routers.svc-http.rule=Host(`myservice.${DOMAIN}`)
+        - traefik.http.routers.svc-http.entrypoints=web
+        - traefik.http.routers.svc-http.middlewares=https-redirect
+        - traefik.http.routers.svc-https.rule=Host(`myservice.${DOMAIN}`)
+        - traefik.http.routers.svc-https.entrypoints=web-secure
+        - traefik.http.routers.svc-https.service=myservice
+        - traefik.http.routers.svc-https.tls=true
+        - traefik.http.routers.svc-https.tls.certresolver=le
+        - traefik.http.services.myservice.loadbalancer.server.port=80
+    networks:
+      - traefik
+networks:
+  traefik-public:
+    external: true
